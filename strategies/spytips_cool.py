@@ -70,10 +70,7 @@ def spy_tips_cool():
     tips_diff = (tips_close - tips_sma_rolling) / tips_sma_rolling
     gold_diff = (gold_close - gold_sma_rolling) / gold_sma_rolling
 
-    # Determine the market state for a given index position:
-    # BUY (SPY) if both SPY and TIPS are above SMA,
-    # GOLD if only gold is above SMA,
-    # SELL (cash) otherwise
+    # Determine the market state for a given index position
     def get_state(idx):
         if spy_diff.iloc[idx] > 0 and tips_diff.iloc[idx] > 0:
             return BUY
@@ -86,7 +83,6 @@ def spy_tips_cool():
     last_entry = None
 
     if not os.path.exists(fileName):
-        # Find the most recent continuous sequence of at least COOLDOWN_DAYS days with the same state
         consecutive_days = 1
         for i in range(2, min(len(spy_diff), len(tips_diff), len(gold_diff))):
             if get_state(-i) == get_state(-i + 1):
@@ -96,16 +92,14 @@ def spy_tips_cool():
             if consecutive_days >= COOLDOWN_DAYS:
                 break
         else:
-            print("Could not find a continuous sequence of cooldown days.")
-            return "Error", "Could not find a continuous sequence of cooldown days.", "This happens if the data is not sufficient or the cooldown days are too high."
+            return "Error", "Could not find a continuous sequence of cooldown days.", "Data insufficient."
 
-        # Write history file from the found start index up to today
         f = open(fileName, 'w')
         indicator = None
         cooldown = 0
         for j in range(i, 0, -1):
             if np.isnan(spy_diff.iloc[-j]) or np.isnan(tips_diff.iloc[-j]) or np.isnan(gold_diff.iloc[-j]):
-                return "Error", None, "SMA calculation failed, please try again later. Some indicators are NaN."
+                return "Error", None, "SMA calculation failed."
             state = get_state(-j)
             if cooldown == 0:
                 if indicator is not None and state != indicator:
@@ -118,30 +112,21 @@ def spy_tips_cool():
                 cooldown -= 1
         f.close()
     else:
-        # Read existing history file and get last recorded entry
         f = open(fileName, 'r')
         file_c = f.readlines()
         f.close()
         last_entry = file_c[-1].split(",")
 
-        # If already up to date, nothing to do
         if last_entry[0] == str(spy.index[-1]):
-            print("Already checked today")
             return None, None, None
 
-        # Find the index of the last recorded date in the spy data
         last_date = pd.to_datetime(last_entry[0])
         last_index = spy.index.get_loc(last_date)
         last_rev_index = last_index - len(spy.index)
         cooldown = int(last_entry[8])
         indicator = last_entry[7].strip()
 
-        assert last_rev_index < -1, "Last entry index is not negative, something went wrong with the data."
-
-        # Append new entries since the last recorded date
         for j in range(last_rev_index + 1, 0):
-            if np.isnan(spy_diff.iloc[j]) or np.isnan(tips_diff.iloc[j]) or np.isnan(gold_diff.iloc[j]):
-                return "Error", None, "SMA calculation failed, please try again later. Some indicators are NaN."
             if cooldown > 0:
                 cooldown -= 1
             state = get_state(j)
@@ -154,12 +139,11 @@ def spy_tips_cool():
                     f"{indicator},{cooldown}\n")
             f.close()
 
-    # Read the latest entry from the history file
+    # Final result parsing
     f = open(fileName, 'r')
     file_c = f.readlines()
     f.close()
 
-    # Parse latest entry: date, spy_close, tips_close, gold_close, spy_sma, tips_sma, gold_sma, indicator, cooldown
     new_entry_raw = file_c[-1].split(",")
     new_entry = {
         "date": new_entry_raw[0],
@@ -173,21 +157,19 @@ def spy_tips_cool():
         "cooldown": int(new_entry_raw[8]),
     }
 
-    # Determine current raw signals (before cooldown)
     spy_indicator = BUY if new_entry["spy_close"] > new_entry["spy_sma"] else SELL
     tips_indicator = BUY if new_entry["tips_close"] > new_entry["tips_sma"] else SELL
     gold_indicator = GOLD if new_entry["gold_close"] > new_entry["gold_sma"] else SELL
     total_indicator = new_entry["indicator"]
 
-    # Helper dict for human-readable state strings
-    state_str = {BUY: "in market (SPY)", GOLD: "in gold", SELL: "in cash"}
+    # --- MAPPER FÜR TRUE / FALSE ---
+    bool_map = {BUY: "TRUE", GOLD: "TRUE", SELL: "FALSE"}
 
     subject = ""
     subject2 = ""
     text = ""
 
     if last_entry is None:
-        # First run: always notify with current state
         if total_indicator == BUY:
             subject = MAIN_SIGNAL_CHANGE_LONG.format(new_entry["cooldown"])
         elif total_indicator == GOLD:
@@ -195,23 +177,17 @@ def spy_tips_cool():
         else:
             subject = MAIN_SIGNAL_CHANGE_SHORT.format(new_entry["cooldown"])
 
-        text += f"Currently {state_str.get(total_indicator, total_indicator)} ({new_entry['cooldown']} cooldown days remaining)\n"
-        text += f"The SIGNAL is {total_indicator}\n"
-        text += f"The SPY signal is {spy_indicator} with a difference of {spy_diff.iloc[-1]:.2%}\n"
-        text += f"The TIPS signal is {tips_indicator} with a difference of {tips_diff.iloc[-1]:.2%}\n"
-        text += f"The GOLD signal is {gold_indicator} with a difference of {gold_diff.iloc[-1]:.2%}\n"
+        text += f"Currently {bool_map.get(total_indicator)} ({new_entry['cooldown']} cooldown days remaining)\n"
+        text += f"The SIGNAL is {bool_map.get(total_indicator)}\n"
+        text += f"The SPY signal is {bool_map.get(spy_indicator)} with a difference of {spy_diff.iloc[-1]:.2%}\n"
+        text += f"The TIPS signal is {bool_map.get(tips_indicator)} with a difference of {tips_diff.iloc[-1]:.2%}\n"
+        text += f"The GOLD signal is {bool_map.get(gold_indicator)} with a difference of {gold_diff.iloc[-1]:.2%}\n"
     else:
-        # Parse previous entry for comparison
         last_entry_parsed = {
-            "date": last_entry[0],
-            "spy_close": float(last_entry[1]),
-            "tips_close": float(last_entry[2]),
-            "gold_close": float(last_entry[3]),
-            "spy_sma": float(last_entry[4]),
-            "tips_sma": float(last_entry[5]),
-            "gold_sma": float(last_entry[6]),
-            "indicator": last_entry[7].strip(),
-            "cooldown": int(last_entry[8]),
+            "spy_close": float(last_entry[1]), "tips_close": float(last_entry[2]),
+            "gold_close": float(last_entry[3]), "spy_sma": float(last_entry[4]),
+            "tips_sma": float(last_entry[5]), "gold_sma": float(last_entry[6]),
+            "indicator": last_entry[7].strip(), "cooldown": int(last_entry[8]),
         }
 
         last_spy_indicator = BUY if last_entry_parsed["spy_close"] > last_entry_parsed["spy_sma"] else SELL
@@ -219,32 +195,25 @@ def spy_tips_cool():
         last_gold_indicator = GOLD if last_entry_parsed["gold_close"] > last_entry_parsed["gold_sma"] else SELL
         last_total_indicator = last_entry_parsed["indicator"]
 
-        # Check if the main indicator (with cooldown) changed
         if total_indicator != last_total_indicator:
-            if total_indicator == BUY:
-                subject = MAIN_SIGNAL_CHANGE_LONG.format(new_entry["cooldown"])
-            elif total_indicator == GOLD:
-                subject = MAIN_SIGNAL_CHANGE_GOLD.format(new_entry["cooldown"])
-            else:
-                subject = MAIN_SIGNAL_CHANGE_SHORT.format(new_entry["cooldown"])
+            if total_indicator == BUY: subject = MAIN_SIGNAL_CHANGE_LONG.format(new_entry["cooldown"])
+            elif total_indicator == GOLD: subject = MAIN_SIGNAL_CHANGE_GOLD.format(new_entry["cooldown"])
+            else: subject = MAIN_SIGNAL_CHANGE_SHORT.format(new_entry["cooldown"])
         else:
-            # Check cooldown warnings
             for i in COOLDOWN_WARNINGS:
                 if new_entry["cooldown"] <= i and last_entry_parsed["cooldown"] > i:
                     subject = COOLDOWN_WARNINGS_TEXT[COOLDOWN_WARNINGS.index(i)]
 
-        # Check if any raw indicator changed (regardless of cooldown)
         if spy_indicator != last_spy_indicator or tips_indicator != last_tips_indicator or gold_indicator != last_gold_indicator:
             subject2 = INDICATOR_CHANGE_TITLE
 
-        # Build status text
-        text += f"Currently {state_str.get(total_indicator, total_indicator)} ({new_entry['cooldown']} cooldown days remaining)\n"
-        text += f"The SIGNAL {'remains' if total_indicator == last_total_indicator else 'has changed to'} {total_indicator}\n"
-        text += f"The SPY signal {'remains' if spy_indicator == last_spy_indicator else 'has changed to'} {spy_indicator}"
+        text += f"Currently {bool_map.get(total_indicator)} ({new_entry['cooldown']} cooldown days remaining)\n"
+        text += f"The SIGNAL {'remains' if total_indicator == last_total_indicator else 'has changed to'} {bool_map.get(total_indicator)}\n"
+        text += f"The SPY signal {'remains' if spy_indicator == last_spy_indicator else 'has changed to'} {bool_map.get(spy_indicator)}"
         text += f" with a difference of {spy_diff.iloc[-1]:.2%}\n"
-        text += f"The TIPS signal {'remains' if tips_indicator == last_tips_indicator else 'has changed to'} {tips_indicator}"
+        text += f"The TIPS signal {'remains' if tips_indicator == last_tips_indicator else 'has changed to'} {bool_map.get(tips_indicator)}"
         text += f" with a difference of {tips_diff.iloc[-1]:.2%}\n"
-        text += f"The GOLD signal {'remains' if gold_indicator == last_gold_indicator else 'has changed to'} {gold_indicator}"
+        text += f"The GOLD signal {'remains' if gold_indicator == last_gold_indicator else 'has changed to'} {bool_map.get(gold_indicator)}"
         text += f" with a difference of {gold_diff.iloc[-1]:.2%}\n"
 
         if DAILY_NOTIFICATION and subject == "" and subject2 == "":
