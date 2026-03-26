@@ -25,11 +25,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install yahooquery pandas yfinance
-
       - name: run script
         run: |
           python3 main.py
-
       - name: Read content from file
         id: read_file
         run: |
@@ -40,7 +38,6 @@ jobs:
             echo "File message.txt not found. No changes to commit."
             exit 0
           fi
-
       - name: Send notification to Discord
         env:
           CONTENT: ${{ env.CONTENT }}
