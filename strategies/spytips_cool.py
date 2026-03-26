@@ -174,9 +174,9 @@ def spy_tips_cool():
     }
 
     # Determine current raw signals (before cooldown)
-    spy_indicator = BUY if new_entry["spy_close"] > new_entry["spy_sma"] else SELL
-    tips_indicator = BUY if new_entry["tips_close"] > new_entry["tips_sma"] else SELL
-    gold_indicator = GOLD if new_entry["gold_close"] > new_entry["gold_sma"] else SELL
+    spy_indicator = TRUE if new_entry["spy_close"] > new_entry["spy_sma"] else FALSE
+    tips_indicator = TRUE if new_entry["tips_close"] > new_entry["tips_sma"] else FALSE
+    gold_indicator = TRUE if new_entry["gold_close"] > new_entry["gold_sma"] else FALSE
     total_indicator = new_entry["indicator"]
 
     # Helper dict for human-readable state strings
@@ -214,9 +214,9 @@ def spy_tips_cool():
             "cooldown": int(last_entry[8]),
         }
 
-        last_spy_indicator = BUY if last_entry_parsed["spy_close"] > last_entry_parsed["spy_sma"] else SELL
-        last_tips_indicator = BUY if last_entry_parsed["tips_close"] > last_entry_parsed["tips_sma"] else SELL
-        last_gold_indicator = GOLD if last_entry_parsed["gold_close"] > last_entry_parsed["gold_sma"] else SELL
+        last_spy_indicator = TRUE if last_entry_parsed["spy_close"] > last_entry_parsed["spy_sma"] else FALSE
+        last_tips_indicator = TRUE if last_entry_parsed["tips_close"] > last_entry_parsed["tips_sma"] else FALSE
+        last_gold_indicator = TRUE if last_entry_parsed["gold_close"] > last_entry_parsed["gold_sma"] else FALSE
         last_total_indicator = last_entry_parsed["indicator"]
 
         # Check if the main indicator (with cooldown) changed
