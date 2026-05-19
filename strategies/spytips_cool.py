@@ -68,7 +68,11 @@ def spy_tips_cool():
     # Calculate relative difference between close and SMA
     spy_diff = (spy_close - spy_sma_rolling) / spy_sma_rolling
     tips_diff = (tips_close - tips_sma_rolling) / tips_sma_rolling
-    gold_diff = (gold_close - gold_sma_rolling) / gold_sma_rolling
+    gold_diff = (gold_close - gold_sma_rolling) / gold_sma_print("TIP date=", tips.index[-1])
+print("TIP close=", tips_close.iloc[-1])
+print("TIP sma=", tips_sma_rolling.iloc[-1])
+print("TIP pct=", tips_diff.iloc[-1])
+
 
     # Determine the market state for a given index position:
     # BUY (SPY) if both SPY and TIPS are above SMA,
