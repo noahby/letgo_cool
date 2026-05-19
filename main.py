@@ -1,5 +1,4 @@
 import traceback
-
 from strategies.spytips_cool import spy_tips_cool
 
 def saveText(subject, subject2=None, text=None):
@@ -15,15 +14,18 @@ def saveText(subject, subject2=None, text=None):
     d.close()
 
 def main():
-    # Vorher:
-# s, s2, t = spy_tips_cool()
-
-# Neu (vier Variablen empfangen):
-signal, spy_ok, tips_ok, gold_ok = spy_tips_cool()
-    if s is None and s2 is None and t is None:
+    # 1. Empfange die 4 Werte von spy_tips_cool
+    signal, spy_ok, tips_ok, gold_ok = spy_tips_cool()
+    
+    # 2. Prüfen, ob Daten kamen (wir prüfen das Signal)
+    if signal is None:
         print("Skipped")
     else:
-        saveText(s, s2, t)
+        # 3. Baue die Texte zusammen
+        # Wir übergeben jetzt das Signal als Hauptbetreff
+        # und die Status-Infos der Indikatoren als subject2/text
+        status_text = f"SPY > SMA: {spy_ok}\nTIPS > SMA: {tips_ok}\nGOLD > SMA: {gold_ok}"
+        saveText(f"Signal: {signal}", "Status der Indikatoren:", status_text)
 
 if __name__ == "__main__":
     try:
