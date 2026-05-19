@@ -16,9 +16,9 @@ def spy_tips_cool():
     print("Starte LETSGO Signal-Berechnung (Python-Edition)...")
 
     # 1. Daten von Yahoo Finance laden (2 Jahre für sichere SMA-Berechnung)
-    spy_raw = yf.download("^SP500TR", period="2y", interval="1d")
-    tips_raw = yf.download("TIP", period="2y", interval="1d")
-    gold_raw = yf.download("GC=F", period="2y", interval="1d")
+    spy_raw = yf.download("^SP500TR", period="2y", interval="1d", auto_adjust=False)
+    tips_raw = yf.download("TIP", period="2y", interval="1d", auto_adjust=False)
+    gold_raw = yf.download("GC=F", period="2y", interval="1d", auto_adjust=False)
 
     if spy_raw.empty or tips_raw.empty or gold_raw.empty:
         print("Fehler: Konnte keine Marktdaten von Yahoo Finance laden.")
@@ -26,17 +26,12 @@ def spy_tips_cool():
 
     # 2. Robustes Extrahieren der Schlusskurse (unabhängig von yfinance MultiIndex-Spalten)
     def get_close_series(df):
-        # Falls die Spalten ein MultiIndex (Tupel) sind, nimm das Element, wo 'Close' drinsteckt
-        if isinstance(df.columns, pd.MultiIndex):
-            for col in df.columns:
-                if col[0].lower() == 'close':
-                    return df[col]
-        else:
-            # Normaler Index
-            for col in df.columns:
-                if str(col).lower() == 'close':
-                    return df[col]
-        raise ValueError("Konnte keine 'Close'-Spalte im DataFrame finden.")
+        # Suche nach 'adj close' ODER 'close'
+        for col in df.columns:
+            col_name = str(col).lower()
+            if 'close' in col_name: # Findet sowohl 'close' als auch 'adj close'
+                return df[col]
+        raise ValueError("Konnte keine Close-Spalte finden.")
 
     spy_close = get_close_series(spy_raw)
     tips_close = get_close_series(tips_raw)
