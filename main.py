@@ -14,18 +14,30 @@ def saveText(subject, subject2=None, text=None):
     d.close()
 
 def main():
-    # 1. Empfange die 4 Werte von spy_tips_cool
-    signal, spy_ok, tips_ok, gold_ok = spy_tips_cool()
+    # 7 Werte empfangen
+    signal, spy_ok, tips_ok, gold_ok, spy_diff, tips_diff, gold_diff = spy_tips_cool()
     
-    # 2. Prüfen, ob Daten kamen (wir prüfen das Signal)
     if signal is None:
         print("Skipped")
-    else:
-        # 3. Baue die Texte zusammen
-        # Wir übergeben jetzt das Signal als Hauptbetreff
-        # und die Status-Infos der Indikatoren als subject2/text
-        status_text = f"SPY > SMA: {spy_ok}\nTIPS > SMA: {tips_ok}\nGOLD > SMA: {gold_ok}"
-        saveText(f"Signal: {signal}", "Status der Indikatoren:", status_text)
+        return
+
+    # Text-Layout im alten Stil zusammenbauen
+    # Wir nehmen an, dass Cooldown 0 ist, wie in deinem Wunsch-Text
+    cooldown_text = "GO LONG NOW (cooldown activated for 0 days)\n\n"
+    
+    # Status-Zeile
+    market_status = f"Currently in market ({'SPY' if signal == 'Buy' else signal}) (0 cooldown days remaining)"
+    
+    # Die Signal-Details
+    details = (
+        f"The SIGNAL is {signal.upper()}\n"
+        f"The SPY signal is {'BUY' if spy_ok else 'SELL'} with a difference of {spy_diff:.2f}%\n"
+        f"The TIPS signal is {'BUY' if tips_ok else 'SELL'} with a difference of {tips_diff:.2f}%\n"
+        f"The GOLD signal is {'GOLD' if gold_ok else 'SELL'} with a difference of {gold_diff:.2f}%"
+    )
+    
+    full_text = cooldown_text + market_status + "\n" + details
+    saveText(full_text)
 
 if __name__ == "__main__":
     try:
