@@ -251,3 +251,8 @@ def spy_tips_cool():
             subject = "Daily Notification"
 
     return subject, subject2, text
+
+print("TIP date=", tips.index[-1])
+print("TIP close=", tips_close.iloc[-1])
+print("TIP sma=", tips_sma_rolling.iloc[-1])
+print("TIP pct=", tips_diff.iloc[-1])
