@@ -24,29 +24,37 @@ def spy_tips_cool():
         print("Fehler: Konnte keine Marktdaten von Yahoo Finance laden.")
         return None
 
-    # 2. Schlusskurse extrahieren (Spaltennamen bei yfinance sind meist klein geschrieben)
-    # Falls dein yfinance 'Close' mit großem C liefert, passt Python das automatisch an (.lower())
-    spy_raw.columns = [col.lower() for col in spy_raw.columns]
-    tips_raw.columns = [col.lower() for col in tips_raw.columns]
-    gold_raw.columns = [col.lower() for col in gold_raw.columns]
+    # 2. Robustes Extrahieren der Schlusskurse (unabhängig von yfinance MultiIndex-Spalten)
+    def get_close_series(df):
+        # Falls die Spalten ein MultiIndex (Tupel) sind, nimm das Element, wo 'Close' drinsteckt
+        if isinstance(df.columns, pd.MultiIndex):
+            for col in df.columns:
+                if col[0].lower() == 'close':
+                    return df[col]
+        else:
+            # Normaler Index
+            for col in df.columns:
+                if str(col).lower() == 'close':
+                    return df[col]
+        raise ValueError("Konnte keine 'Close'-Spalte im DataFrame finden.")
 
-    spy_close = spy_raw['close']
-    tips_close = tips_raw['close']
-    gold_close = gold_raw['close']
+    spy_close = get_close_series(spy_raw)
+    tips_close = get_close_series(tips_raw)
+    gold_close = get_close_series(gold_raw)
 
-    # 3. MultiIndex auflösen, falls yfinance die Daten geschachtelt zurückgibt
+    # 3. MultiIndex des Datums-Index auflösen, falls vorhanden
     if isinstance(spy_close.index, pd.MultiIndex):
-        spy_close.index = pd.to_datetime(spy_close.index.get_level_values('date')).normalize()
+        spy_close.index = pd.to_datetime(spy_close.index.get_level_values('Date')).normalize()
     else:
         spy_close.index = pd.to_datetime(spy_close.index).normalize()
 
     if isinstance(tips_close.index, pd.MultiIndex):
-        tips_close.index = pd.to_datetime(tips_close.index.get_level_values('date')).normalize()
+        tips_close.index = pd.to_datetime(tips_close.index.get_level_values('Date')).normalize()
     else:
         tips_close.index = pd.to_datetime(tips_close.index).normalize()
 
     if isinstance(gold_close.index, pd.MultiIndex):
-        gold_close.index = pd.to_datetime(gold_close.index.get_level_values('date')).normalize()
+        gold_close.index = pd.to_datetime(gold_close.index.get_level_values('Date')).normalize()
     else:
         gold_close.index = pd.to_datetime(gold_close.index).normalize()
 
