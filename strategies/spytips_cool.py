@@ -61,9 +61,20 @@ def spy_tips_cool():
     main_df = main_df.ffill().dropna()
 
     # 6. SMAs auf den perfekt synchronisierten Daten berechnen
-    main_df['spy_sma'] = main_df['spy'].rolling(window=SPY_SMA).mean()
-    main_df['tips_sma'] = main_df['tips'].rolling(window=TIPS_SMA).mean()
-    main_df['gold_sma'] = main_df['gold'].rolling(window=GOLD_SMA).mean()
+    # Anstatt .rolling().mean() nutzen wir eine manuelle SMA-Funktion
+    def manual_sma(data_series, n):
+        sma_values = []
+        for i in range(len(data_series)):
+            if i < n - 1:
+                sma_values.append(None)
+            else:
+                window = data_series[i - n + 1 : i + 1]
+                sma_values.append(sum(window) / n)
+        return sma_values
+
+    main_df['spy_sma'] = manual_sma(main_df['spy'].tolist(), SPY_SMA)
+    main_df['tips_sma'] = manual_sma(main_df['tips'].tolist(), TIPS_SMA)
+    main_df['gold_sma'] = manual_sma(main_df['gold'].tolist(), GOLD_SMA)
 
     # Zeilen ohne vollständige historische SMA-Werte abschneiden
     main_df = main_df.dropna()
