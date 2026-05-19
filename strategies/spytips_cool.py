@@ -68,7 +68,8 @@ def spy_tips_cool():
     # Calculate relative difference between close and SMA
     spy_diff = (spy_close - spy_sma_rolling) / spy_sma_rolling
     tips_diff = (tips_close - tips_sma_rolling) / tips_sma_rolling
-    gold_diff = (gold_close - gold_sma_rolling) / gold_sma_print("TIP date=", tips.index[-1])
+    gold_diff = (gold_close - gold_sma_rolling) / gold_sma_rolling
+
     
 
     # Determine the market state for a given index position:
