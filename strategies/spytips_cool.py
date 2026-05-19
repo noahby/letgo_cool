@@ -120,10 +120,15 @@ def spy_tips_cool():
     except Exception as e:
         print(f"Fehler beim Schreiben der Historie-Datei: {e}")
 
-    return {
-        "date": latest_date,
-        "signal": current_signal,
-        "spy_above": bool(latest_row['spy'] > latest_row['spy_sma']),
-        "tips_above": bool(latest_row['tips'] > latest_row['tips_sma']),
-        "gold_above": bool(latest_row['gold'] > latest_row['gold_sma'])
-    }
+# Rückgabe der drei Status-Werte:
+    # s  = Das finale Signal (BUY, GOLD oder CASH)
+    # s2 = Der Status von SPY (True wenn über SMA, sonst False)
+    # t  = Der Status von TIPS (True wenn über SMA, sonst False)
+    
+    # 9. Rückgabe: Signal, SPY-Status, TIPS-Status, GOLD-Status
+    return (
+        current_signal, 
+        bool(latest_row['spy'] > latest_row['spy_sma']), 
+        bool(latest_row['tips'] > latest_row['tips_sma']), 
+        bool(latest_row['gold'] > latest_row['gold_sma'])
+    )
