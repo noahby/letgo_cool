@@ -76,7 +76,10 @@ def spy_tips_cool():
     if main_df.empty:
         print("Fehler: Nach der SMA-Berechnung sind keine Daten übrig geblieben.")
         return None
-
+# DEBUG: Lass uns die exakten Werte aus Python ausgeben
+    latest_row = main_df.iloc[-1]
+    print(f"DEBUG_TIPS_KURS: {latest_row['tips']}")
+    print(f"DEBUG_TIPS_SMA: {latest_row['tips_sma']}")
     # 7. Signale für die Historie generieren
     signals = []
     for i in range(len(main_df)):
