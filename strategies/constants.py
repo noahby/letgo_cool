@@ -3,7 +3,7 @@
 # ********************************** SPY TIPS COOL STRATEGY **********************************
 SPY_SMA = 150
 TIPS_SMA = 200
-GOLD_SMA = 200
+GOLD_SMA = 175
 
 COOLDOWN_DAYS = 15
 
