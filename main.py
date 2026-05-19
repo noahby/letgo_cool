@@ -13,6 +13,8 @@ def saveText(subject, subject2=None, text=None):
         d.write(text)
     d.close()
 
+import os
+
 def main():
     # 7 Werte empfangen
     signal, spy_ok, tips_ok, gold_ok, spy_diff, tips_diff, gold_diff = spy_tips_cool()
@@ -21,12 +23,29 @@ def main():
         print("Skipped")
         return
 
-    # Text-Layout im alten Stil zusammenbauen
-    # Wir nehmen an, dass Cooldown 0 ist, wie in deinem Wunsch-Text
-    cooldown_text = "GO LONG NOW (cooldown activated for 0 days)\n\n"
+    # 1. Prüfe, ob das Signal ein Wechsel ist
+    last_signal = "None"
+    history_file = "history_150_200_175.txt" # Passe den Namen hier ggf. an!
     
-    # Status-Zeile
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as f:
+            lines = f.readlines()
+            if lines:
+                last_signal = lines[-1].strip() # Nimmt die letzte Zeile als altes Signal
+
+    # 2. Cooldown-Text nur bei Wechsel setzen
+    if signal != last_signal:
+        cooldown_text = f"SIGNAL WECHSEL: Neuer Modus -> {signal.upper()}\n\n"
+        # Speichere das neue Signal in die Historie
+        with open(history_file, 'a') as f:
+            f.write(signal + "\n")
+    else:
+        cooldown_text = f"Marktstatus: {signal.upper()} (kein Wechsel)\n\n"
+
+    # Rest bleibt gleich
     market_status = f"Currently in market ({'SPY' if signal == 'Buy' else signal}) (0 cooldown days remaining)"
+    
+    # ... (Rest der details und saveText wie gehabt)
     
     # Die Signal-Details
     details = (
