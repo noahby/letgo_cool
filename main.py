@@ -15,7 +15,11 @@ def saveText(subject, subject2=None, text=None):
     d.close()
 
 def main():
-    s, s2, t = spy_tips_cool()
+    # Vorher:
+# s, s2, t = spy_tips_cool()
+
+# Neu (vier Variablen empfangen):
+signal, spy_ok, tips_ok, gold_ok = spy_tips_cool()
     if s is None and s2 is None and t is None:
         print("Skipped")
     else:
