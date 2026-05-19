@@ -16,9 +16,9 @@ def spy_tips_cool():
     print("Starte LETSGO Signal-Berechnung (Python-Edition)...")
 
     # 1. Daten von Yahoo Finance laden (2 Jahre für sichere SMA-Berechnung)
-    spy_raw = yf.download("^SP500TR", period="2y", interval="1d", auto_adjust=False)
-    tips_raw = yf.download("TIP", period="2y", interval="1d", auto_adjust=False)
-    gold_raw = yf.download("GC=F", period="2y", interval="1d", auto_adjust=False)
+    spy_raw = yf.download("^SP500TR", period="5y", interval="1d", auto_adjust=False)
+    tips_raw = yf.download("TIP", period="5y", interval="1d", auto_adjust=False)
+    gold_raw = yf.download("GC=F", period="5y", interval="1d", auto_adjust=False)
 
     if spy_raw.empty or tips_raw.empty or gold_raw.empty:
         print("Fehler: Konnte keine Marktdaten von Yahoo Finance laden.")
