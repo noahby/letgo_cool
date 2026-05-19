@@ -124,9 +124,16 @@ def spy_tips_cool():
     # t  = Der Status von TIPS (True wenn über SMA, sonst False)
     
     # 9. Rückgabe: Signal, SPY-Status, TIPS-Status, GOLD-Status
+   # Berechne die prozentualen Abstände zum SMA
+    spy_diff = ((latest_row['spy'] - latest_row['spy_sma']) / latest_row['spy_sma']) * 100
+    tips_diff = ((latest_row['tips'] - latest_row['tips_sma']) / latest_row['tips_sma']) * 100
+    gold_diff = ((latest_row['gold'] - latest_row['gold_sma']) / latest_row['gold_sma']) * 100
+
+    # Rückgabe: Signal, SPY-Bool, TIPS-Bool, GOLD-Bool, DANN die 3 Prozentwerte
     return (
         current_signal, 
         bool(latest_row['spy'] > latest_row['spy_sma']), 
         bool(latest_row['tips'] > latest_row['tips_sma']), 
-        bool(latest_row['gold'] > latest_row['gold_sma'])
+        bool(latest_row['gold'] > latest_row['gold_sma']),
+        spy_diff, tips_diff, gold_diff
     )
