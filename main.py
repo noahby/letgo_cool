@@ -30,11 +30,12 @@ def main():
     
     # Die Signal-Details
     details = (
-        f"The SIGNAL is {signal.upper()}\n"
-        f"The SPY signal is {'BUY' if spy_ok else 'SELL'} with a difference of {spy_diff:.2f}%\n"
-        f"The TIPS signal is {'BUY' if tips_ok else 'SELL'} with a difference of {tips_diff:.2f}%\n"
-        f"The GOLD signal is {'GOLD' if gold_ok else 'SELL'} with a difference of {gold_diff:.2f}%"
+    f"The SIGNAL is {signal.upper()}\n"
+    f"The SPY signal is {'BUY' if spy_ok else 'SELL'} with a difference of {spy_diff:.2f}%\n"
+    f"The TIPS signal is {'BUY' if tips_ok else 'SELL'} with a difference of {tips_diff:.2f}%\n"
+    f"The GOLD signal is {'GOLD' if gold_ok else 'SELL'} with a difference of {gold_diff:.2f}%"
     )
+
     
     full_text = cooldown_text + market_status + "\n" + details
     saveText(full_text)
