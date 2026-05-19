@@ -1,150 +1,59 @@
-import pandas as pd
-import yfinance as yf
-import os
+import requests
 
-# Konstanten für die Signale
-BUY = "Buy"
-GOLD = "Gold"
-SELL = "Cash"
+def fetch_yahoo_data(ticker):
+    # Exakt die gleiche Abfrage wie im Google Apps Script
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range=2y&interval=1d"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        res = requests.get(url, headers=headers).json()
+        closes = res['chart']['result'][0]['indicators']['quote'][0]['close']
+        # None-Werte entfernen (wie im Sheet)
+        return [c for c in closes if c is not None]
+    except Exception as e:
+        print(f"Fehler bei {ticker}: {e}")
+        return []
 
-# Konstanten für die SMAs
-SPY_SMA = 150
-TIPS_SMA = 200
-GOLD_SMA = 175
+def calculate_sma(data, n):
+    if len(data) < n: return 0
+    return sum(data[-n:]) / n
 
 def spy_tips_cool():
-    print("Starte LETSGO Signal-Berechnung (Python-Edition)...")
+    # 1. Daten holen
+    spy_data = fetch_yahoo_data("^SP500TR")
+    tips_data = fetch_yahoo_data("TIP")
+    gold_data = fetch_yahoo_data("GC=F")
 
-    # 1. Daten von Yahoo Finance laden (2 Jahre für sichere SMA-Berechnung)
-    spy_raw = yf.download("^SP500TR", period="5y", interval="1d", auto_adjust=False)
-    tips_raw = yf.download("TIP", period="5y", interval="1d", auto_adjust=False)
-    gold_raw = yf.download("GC=F", period="5y", interval="1d", auto_adjust=False)
+    if not spy_data or not tips_data or not gold_data:
+        return None, None, None, None, 0, 0, 0
 
-    if spy_raw.empty or tips_raw.empty or gold_raw.empty:
-        print("Fehler: Konnte keine Marktdaten von Yahoo Finance laden.")
-        return None
+    # 2. Kurse für heute (letzter Index)
+    spy_close = spy_data[-1]
+    tips_close = tips_data[-1]
+    gold_close = gold_data[-1]
 
-    # 2. Robustes Extrahieren der Schlusskurse (unabhängig von yfinance MultiIndex-Spalten)
-    def get_close_series(df):
-        # Suche nach 'adj close' ODER 'close'
-        for col in df.columns:
-            col_name = str(col).lower()
-            if 'close' in col_name: # Findet sowohl 'close' als auch 'adj close'
-                return df[col]
-        raise ValueError("Konnte keine Close-Spalte finden.")
+    # 3. SMAs berechnen (wie im Sheet: Durchschnitt der letzten N Tage)
+    spy_sma = calculate_sma(spy_data, 150)
+    tips_sma = calculate_sma(tips_data, 200)
+    gold_sma = calculate_sma(gold_data, 175)
 
-    spy_close = get_close_series(spy_raw)
-    tips_close = get_close_series(tips_raw)
-    gold_close = get_close_series(gold_raw)
+    # 4. Booleans für den Status
+    spy_ok = spy_close > spy_sma
+    tips_ok = tips_close > tips_sma
+    gold_ok = gold_close > gold_sma
 
-    # 3. MultiIndex des Datums-Index auflösen, falls vorhanden
-    if isinstance(spy_close.index, pd.MultiIndex):
-        spy_close.index = pd.to_datetime(spy_close.index.get_level_values('Date')).normalize()
+    # 5. Signal-Logik 1:1 wie im Sheet
+    if spy_ok and tips_ok:
+        current_signal = "Buy"
+    elif gold_ok:
+        current_signal = "Gold"
     else:
-        spy_close.index = pd.to_datetime(spy_close.index).normalize()
+        current_signal = "Cash"
 
-    if isinstance(tips_close.index, pd.MultiIndex):
-        tips_close.index = pd.to_datetime(tips_close.index.get_level_values('Date')).normalize()
-    else:
-        tips_close.index = pd.to_datetime(tips_close.index).normalize()
+    # 6. Prozentuale Differenzen berechnen
+    spy_diff = ((spy_close - spy_sma) / spy_sma) * 100
+    tips_diff = ((tips_close - tips_sma) / tips_sma) * 100
+    gold_diff = ((gold_close - gold_sma) / gold_sma) * 100
 
-    if isinstance(gold_close.index, pd.MultiIndex):
-        gold_close.index = pd.to_datetime(gold_close.index.get_level_values('Date')).normalize()
-    else:
-        gold_close.index = pd.to_datetime(gold_close.index).normalize()
-
-    # 4. Datums-Achsen perfekt synchronisieren (Exakt wie axis=1 in Google Sheets)
-    main_df = pd.concat([spy_close, tips_close, gold_close], axis=1)
-    main_df.columns = ['spy', 'tips', 'gold']
+    print(f"DEBUG: TIPS-Kurs {tips_close:.4f} / SMA {tips_sma:.4f}")
     
-    # 5. Lücken füllen (Forward-Fill für asynchrone Feiertage zwischen den Börsen)
-    main_df = main_df.ffill().dropna()
-
-    # 6. SMAs auf den perfekt synchronisierten Daten berechnen
-    # Anstatt .rolling().mean() nutzen wir eine manuelle SMA-Funktion
-    def manual_sma(data_series, n):
-        sma_values = []
-        for i in range(len(data_series)):
-            if i < n - 1:
-                sma_values.append(None)
-            else:
-                window = data_series[i - n + 1 : i + 1]
-                sma_values.append(sum(window) / n)
-        return sma_values
-
-    main_df['spy_sma'] = manual_sma(main_df['spy'].tolist(), SPY_SMA)
-    main_df['tips_sma'] = manual_sma(main_df['tips'].tolist(), TIPS_SMA)
-    main_df['gold_sma'] = manual_sma(main_df['gold'].tolist(), GOLD_SMA)
-
-    # Zeilen ohne vollständige historische SMA-Werte abschneiden
-    main_df = main_df.dropna()
-
-    if main_df.empty:
-        print("Fehler: Nach der SMA-Berechnung sind keine Daten übrig geblieben.")
-        return None
-# DEBUG: Lass uns die exakten Werte aus Python ausgeben
-    latest_row = main_df.iloc[-1]
-    print(f"DEBUG_TIPS_KURS: {latest_row['tips']}")
-    print(f"DEBUG_TIPS_SMA: {latest_row['tips_sma']}")
-    # 7. Signale für die Historie generieren
-    signals = []
-    for i in range(len(main_df)):
-        spy_val = main_df['spy'].iloc[i]
-        spy_sma = main_df['spy_sma'].iloc[i]
-        tips_val = main_df['tips'].iloc[i]
-        tips_sma = main_df['tips_sma'].iloc[i]
-        gold_val = main_df['gold'].iloc[i]
-        gold_sma = main_df['gold_sma'].iloc[i]
-
-        # Kaskaden-Logik 1:1 wie im Google Sheet
-        if spy_val > spy_sma and tips_val > tips_sma:
-            state = BUY
-        elif gold_val > gold_sma:
-            state = GOLD
-        else:
-            state = SELL
-        
-        signals.append(state)
-
-    main_df['signal'] = signals
-
-    # 8. Letzten aktuellen Stand für Discord / Output ermitteln
-    latest_row = main_df.iloc[-1]
-    latest_date = main_df.index[-1].strftime("%Y-%m-%d")
-    current_signal = latest_row['signal']
-
-    print(f"Berechnung abgeschlossen für Stichtag: {latest_date}")
-    print(f"Aktuelles Signal: {current_signal}")
-    print(f"SPY: {latest_row['spy']:.2f} (SMA: {latest_row['spy_sma']:.2f})")
-    print(f"TIPS: {latest_row['tips']:.2f} (SMA: {latest_row['tips_sma']:.2f})")
-    print(f"GOLD: {latest_row['gold']:.2f} (SMA: {latest_row['gold_sma']:.2f})")
-
-    # 9. Optional: History-Datei schreiben (falls dein main.py das hier erwartet)
-    history_filename = "history_150_200_175.txt"
-    try:
-        with open(history_filename, "w") as f:
-            for date, row in main_df.iterrows():
-                f.write(f"{date.strftime('%Y-%m-%d')},{row['signal']}\n")
-        print(f"Historie erfolgreich in {history_filename} exportiert.")
-    except Exception as e:
-        print(f"Fehler beim Schreiben der Historie-Datei: {e}")
-
-# Rückgabe der drei Status-Werte:
-    # s  = Das finale Signal (BUY, GOLD oder CASH)
-    # s2 = Der Status von SPY (True wenn über SMA, sonst False)
-    # t  = Der Status von TIPS (True wenn über SMA, sonst False)
-    
-    # 9. Rückgabe: Signal, SPY-Status, TIPS-Status, GOLD-Status
-   # Berechne die prozentualen Abstände zum SMA
-    spy_diff = ((latest_row['spy'] - latest_row['spy_sma']) / latest_row['spy_sma']) * 100
-    tips_diff = ((latest_row['tips'] - latest_row['tips_sma']) / latest_row['tips_sma']) * 100
-    gold_diff = ((latest_row['gold'] - latest_row['gold_sma']) / latest_row['gold_sma']) * 100
-
-    # Rückgabe: Signal, SPY-Bool, TIPS-Bool, GOLD-Bool, DANN die 3 Prozentwerte
-    return (
-        current_signal, 
-        bool(latest_row['spy'] > latest_row['spy_sma']), 
-        bool(latest_row['tips'] > latest_row['tips_sma']), 
-        bool(latest_row['gold'] > latest_row['gold_sma']),
-        spy_diff, tips_diff, gold_diff
-    )
+    return current_signal, spy_ok, tips_ok, gold_ok, spy_diff, tips_diff, gold_diff
