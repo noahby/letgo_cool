@@ -1,59 +1,95 @@
-import requests
+import traceback
+import os
+from datetime import date
+from strategies.spytips_cool import spy_tips_cool
 
-def fetch_yahoo_data(ticker):
-    # Exakt die gleiche Abfrage wie im Google Apps Script
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range=2y&interval=1d"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    try:
-        res = requests.get(url, headers=headers).json()
-        closes = res['chart']['result'][0]['indicators']['quote'][0]['close']
-        # None-Werte entfernen (wie im Sheet)
-        return [c for c in closes if c is not None]
-    except Exception as e:
-        print(f"Fehler bei {ticker}: {e}")
-        return []
+COOLDOWN_DAYS = 10  # Anpassen nach Bedarf
 
-def calculate_sma(data, n):
-    if len(data) < n: return 0
-    return sum(data[-n:]) / n
+def saveText(subject, subject2=None, text=None):
+    if not subject and not subject2:
+        return
+    d = open('message.txt', 'w')
+    if subject:
+        d.write(subject + "\n\n")
+    if subject2:
+        d.write(subject2 + "\n\n")
+    if text:
+        d.write(text)
+    d.close()
 
-def spy_tips_cool():
-    # 1. Daten holen
-    spy_data = fetch_yahoo_data("^SP500TR")
-    tips_data = fetch_yahoo_data("TIP")
-    gold_data = fetch_yahoo_data("GC=F")
+def main():
+    signal, spy_ok, tips_ok, gold_ok, spy_diff, tips_diff, gold_diff = spy_tips_cool()
 
-    if not spy_data or not tips_data or not gold_data:
-        return None, None, None, None, 0, 0, 0
+    if signal is None:
+        print("Skipped")
+        return
 
-    # 2. Kurse für heute (letzter Index)
-    spy_close = spy_data[-1]
-    tips_close = tips_data[-1]
-    gold_close = gold_data[-1]
+    today = str(date.today())
+    history_file = f"history_150_200_175_{COOLDOWN_DAYS}.txt"
 
-    # 3. SMAs berechnen (wie im Sheet: Durchschnitt der letzten N Tage)
-    spy_sma = calculate_sma(spy_data, 150)
-    tips_sma = calculate_sma(tips_data, 200)
-    gold_sma = calculate_sma(gold_data, 175)
+    # --- History lesen ---
+    last_date = None
+    last_signal = None
+    last_cooldown = 0
 
-    # 4. Booleans für den Status
-    spy_ok = spy_close > spy_sma
-    tips_ok = tips_close > tips_sma
-    gold_ok = gold_close > gold_sma
+    if os.path.exists(history_file):
+        with open(history_file, 'r') as f:
+            lines = [l.strip() for l in f.readlines() if l.strip()]
+        if lines:
+            parts = lines[-1].split(",")
+            last_date    = parts[0]
+            last_signal  = parts[1]
+            last_cooldown = int(parts[2])
 
-    # 5. Signal-Logik 1:1 wie im Sheet
-    if spy_ok and tips_ok:
-        current_signal = "Buy"
-    elif gold_ok:
-        current_signal = "Gold"
+    # --- Heute schon berechnet? ---
+    if last_date == today:
+        print("Already checked today")
+        return
+
+    # --- Cooldown berechnen ---
+    cooldown = last_cooldown
+
+    # Erst dekrementieren (ein Tag ist vergangen)
+    if cooldown > 0:
+        cooldown -= 1
+
+    # Signalwechsel → neuen Cooldown setzen
+    if last_signal is not None and signal != last_signal:
+        cooldown = COOLDOWN_DAYS
+
+    # --- Neuen Eintrag speichern ---
+    with open(history_file, 'a') as f:
+        f.write(f"{today},{signal},{cooldown}\n")
+
+    # --- Output zusammenbauen ---
+    if last_signal is None or signal != last_signal:
+        subject = f"SIGNAL WECHSEL: Neuer Modus → {signal.upper()}"
     else:
-        current_signal = "Cash"
+        subject = "Daily Notification"
 
-    # 6. Prozentuale Differenzen berechnen
-    spy_diff = ((spy_close - spy_sma) / spy_sma) * 100
-    tips_diff = ((tips_close - tips_sma) / tips_sma) * 100
-    gold_diff = ((gold_close - gold_sma) / gold_sma) * 100
+    market_map = {"Buy": "SPY", "Gold": "GOLD", "Cash": "Cash"}
+    market_status = (
+        f"Currently in market ({market_map[signal]}) "
+        f"({cooldown} cooldown days remaining)"
+    )
 
-    print(f"DEBUG: TIPS-Kurs {tips_close:.4f} / SMA {tips_sma:.4f}")
-    
-    return current_signal, spy_ok, tips_ok, gold_ok, spy_diff, tips_diff, gold_diff
+    details = (
+        f"The SIGNAL is {signal.upper()}\n"
+        f"The SPY signal is {'BUY' if spy_ok else 'SELL'} "
+        f"with a difference of {spy_diff:.2f}%\n"
+        f"The TIPS signal is {'BUY' if tips_ok else 'SELL'} "
+        f"with a difference of {tips_diff:.2f}%\n"
+        f"The GOLD signal is {'BUY' if gold_ok else 'SELL'} "
+        f"with a difference of {gold_diff:.2f}%"
+    )
+
+    full_text = market_status + "\n\n" + details
+    saveText(subject, text=full_text)
+    print(full_text)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        error = repr(traceback.format_exception(e))
+        saveText("Error", error)
