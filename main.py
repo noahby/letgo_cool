@@ -37,26 +37,25 @@ def main():
         if lines:
             parts = lines[-1].split(",")
             last_date     = parts[0]
-            last_signal   = parts[1]
+            last_signal   = parts[1].strip()
             last_cooldown = int(parts[2])
 
     if last_date == today:
         print("Already checked today")
         return
 
- cooldown = last_cooldown
-if cooldown > 0:
-    cooldown -= 1
+    cooldown = last_cooldown
+    if cooldown > 0:
+        cooldown -= 1
 
-# Signalwechsel → aber nur wenn kein Cooldown aktiv!
-if last_signal is not None and signal != last_signal:
-    if cooldown == 0:          # ← NUR dann wechseln
-        cooldown = COOLDOWN_DAYS
-    else:
-        signal = last_signal   # ← Cooldown aktiv → Signal einfrieren
+    if last_signal is not None and signal != last_signal:
+        if cooldown == 0:
+            cooldown = COOLDOWN_DAYS
+        else:
+            signal = last_signal  # Cooldown aktiv → Signal einfrieren
 
-with open(history_file, 'a') as f:
-    f.write(f"{today},{signal},{cooldown}\n")
+    with open(history_file, 'a') as f:
+        f.write(f"{today},{signal},{cooldown}\n")
 
     if last_signal is None or signal != last_signal:
         subject = f"SIGNAL WECHSEL: Neuer Modus → {signal.upper()}"
