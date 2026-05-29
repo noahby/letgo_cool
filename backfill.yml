@@ -1,0 +1,29 @@
+name: Backfill History
+
+on:
+  workflow_dispatch:  # ← nur manuell auslösbar
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Python Setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run backfill
+        run: python3 backfill.py
+
+      - name: Commit history file
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add history_150_200_175_15.txt
+          git commit -m "Backfill history"
+          git push
