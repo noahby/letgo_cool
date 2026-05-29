@@ -1,9 +1,9 @@
 import traceback
 import os
 from datetime import date
-from strategies.spytips_cool import spy_tips_cool
 
-COOLDOWN_DAYS = 10  # Anpassen nach Bedarf
+
+COOLDOWN_DAYS = 15  # Anpassen nach Bedarf
 
 def saveText(subject, subject2=None, text=None):
     if not subject and not subject2:
