@@ -18,14 +18,16 @@ def saveText(subject, subject2=None, text=None):
     d.close()
 
 def main():
-    signal, spy_ok, tips_ok, gold_ok, spy_diff, tips_diff, gold_diff = spy_tips_cool()
+    # NEU: Nur 5 Return-Werte (kein Gold mehr)
+    signal, spy_ok, tips_ok, spy_diff, tips_diff = spy_tips_cool()
 
     if signal is None:
         print("Skipped")
         return
 
     today = str(date.today())
-    history_file = f"history_150_200_175_{COOLDOWN_DAYS}.txt"
+    # NEU: History-Dateiname mit neuen SMA-Parametern (160/160 statt 150/200)
+    history_file = f"history_160_160_{COOLDOWN_DAYS}.txt"
 
     last_date = None
     last_signal = None
@@ -62,20 +64,21 @@ def main():
     else:
         subject = "Daily Notification"
 
-    market_map = {"Buy": "SPY", "Gold": "GOLD", "Cash": "Cash"}
+    # NEU: Kein Gold mehr im market_map
+    market_map = {"Buy": "SPY", "Cash": "Cash"}
     market_status = (
         f"Currently in market ({market_map[signal]}) "
         f"({cooldown} cooldown days remaining)"
     )
 
+    # NEU: Nur SPY und TIPS, kein Gold mehr
     details = (
         f"The SIGNAL is {signal.upper()}\n"
         f"The SPY signal is {'BUY' if spy_ok else 'SELL'} "
         f"with a difference of {spy_diff:.2f}%\n"
         f"The TIPS signal is {'BUY' if tips_ok else 'SELL'} "
-        f"with a difference of {tips_diff:.2f}%\n"
-        f"The GOLD signal is {'BUY' if gold_ok else 'SELL'} "
-        f"with a difference of {gold_diff:.2f}%"
+        f"with a difference of {tips_diff:.2f}%"
+        # GOLD-Zeile entfernt
     )
 
     full_text = market_status + "\n\n" + details
