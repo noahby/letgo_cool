@@ -1,9 +1,10 @@
 # STRATEGY PARAMETERS
 
 # ********************************** SPY TIPS COOL STRATEGY **********************************
-SPY_SMA = 150
-TIPS_SMA = 200
-GOLD_SMA = 175
+# NEU: SMA160/160 statt 150/200 (Gruppenentscheid 01.09.2026)
+SPY_SMA = 160
+TIPS_SMA = 160
+# GOLD_SMA = 175  # ENTFERNT - Gold-Signal gibt es nicht mehr
 
 COOLDOWN_DAYS = 15
 
@@ -14,7 +15,7 @@ DAILY_NOTIFICATION = True
 # main subjects
 MAIN_SIGNAL_CHANGE_LONG = f"GO LONG NOW (cooldown activated for {0} days)"
 MAIN_SIGNAL_CHANGE_SHORT = f"GO IN CASH NOW (cooldown activated for {0} days)"
-MAIN_SIGNAL_CHANGE_GOLD = f"GO IN GOLD NOW (cooldown activated for {0} days)"
+# MAIN_SIGNAL_CHANGE_GOLD = f"GO IN GOLD NOW (cooldown activated for {0} days)"  # ENTFERNT
 COOLDOWN_WARNINGS = [1]
 COOLDOWN_WARNINGS_TEXT = ["Cooldown warning: Last day of cooldown"]
 
@@ -27,5 +28,5 @@ assert len(COOLDOWN_WARNINGS) == len(COOLDOWN_WARNINGS_TEXT), "COOLDOWN_WARNINGS
 # DO NOT CHANGE THESE
 BUY = "BUY"
 SELL = "SELL"
-GOLD = "GOLD"
+# GOLD = "GOLD"  # ENTFERNT - nur noch BUY/CASH
 HISTORY_FILENAME = "history"
